@@ -2,10 +2,10 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { EllipsisHorizontalIcon } from '@heroicons/react/24/outline'
+import { EllipsisHorizontalIcon, TrashIcon } from '@heroicons/react/24/outline'
 import type { Column as ColumnType, Task as TaskType } from '@/lib/store'
 import { Task } from './Task'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useBoard } from '@/lib/store'
 
 interface ColumnProps {
@@ -16,6 +16,8 @@ interface ColumnProps {
 export function Column({ column, tasks }: ColumnProps) {
   const [isAddingCard, setIsAddingCard] = useState(false)
   const [cardContent, setCardContent] = useState('')
+  const [showMenu, setShowMenu] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
   const { addTask } = useBoard()
 
   const {
@@ -33,6 +35,16 @@ export function Column({ column, tasks }: ColumnProps) {
     transform: CSS.Transform.toString(transform),
     transition,
   }
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleAddCard = () => {
     if (cardContent.trim()) {
@@ -61,14 +73,40 @@ export function Column({ column, tasks }: ColumnProps) {
     >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-white font-medium">{column.title}</h2>
-        <button className="p-1 hover:bg-gray-700 rounded active:bg-gray-600">
-          <EllipsisHorizontalIcon className="w-5 h-5 text-gray-400" />
-        </button>
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="p-1 hover:bg-gray-700 rounded active:bg-gray-600"
+          >
+            <EllipsisHorizontalIcon className="w-5 h-5 text-gray-400" />
+          </button>
+          {showMenu && (
+            <div className="absolute right-0 mt-1 w-48 rounded-md shadow-lg bg-card-bg ring-1 ring-black ring-opacity-5 z-10">
+              <div className="py-1">
+                <button
+                  className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-gray-700"
+                  onClick={() => {
+                    // Implement delete functionality
+                    setShowMenu(false)
+                  }}
+                >
+                  <TrashIcon className="w-4 h-4 mr-2" />
+                  Delete Column
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 min-h-[2rem]">
         {tasks.map((task) => (
           <Task key={task.id} task={task} />
         ))}
+        {tasks.length === 0 && !isAddingCard && (
+          <div className="text-gray-500 text-sm text-center py-4 border border-dashed border-gray-700 rounded">
+            No cards yet
+          </div>
+        )}
       </div>
       {isAddingCard ? (
         <div className="mt-2">
